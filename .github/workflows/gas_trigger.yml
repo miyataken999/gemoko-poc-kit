@@ -1,24 +1,44 @@
-name: Simple GAS Triggered CI/CD
+name: Deploy Code to GAS via Clasp
 
 on:
-  repository_dispatch:
-    types: [gas_event]
   push:
     branches: [ main, master ]
+  workflow_dispatch: # 手動実行ボタン用
 
 jobs:
-  run-agent:
+  deploy-to-gas:
     runs-on: ubuntu-latest
+
     steps:
       - name: リポジトリのチェックアウト
         uses: actions/checkout@v4
 
-      - name: Python環境セットアップ
-        uses: actions/setup-python@v5
+      - name: Node.js のセットアップ
+        uses: actions/setup-node@v4
         with:
-          python-version: '3.11'
+          node-version: '20'
 
-      - name: アクションの自動実行
+      - name: clasp のグローバルインストール
+        run: npm install -g @google/clasp
+
+      - name: 認証情報（.clasprc.json）と設定（.clasp.json）の生成
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          GAS_SCRIPT_ID: ${{ secrets.GAS_SCRIPT_ID }}
         run: |
-          echo "🚀 GAS / n8n からのトリガーで GitHub Actions が起動しました！"
-          echo "イベントメッセージ: ${{ github.event.client_payload.message }}"
+          # 1. ホームディレクトリに Google 認証トークンを配置
+          echo "$CLASPRC_JSON" > ~/.clasprc.json
+          
+          # 2. プロジェクト直下に .clasp.json を自動生成
+          cat <<EOF > .clasp.json
+          {
+            "scriptId": "$GAS_SCRIPT_ID",
+            "rootDir": "./src"
+          }
+          EOF
+
+      - name: GAS へのコード反映 (clasp push)
+        run: |
+          echo "🚀 GAS へ最新コードをアップロード中..."
+          clasp push -f
+          echo "🎉 GAS へのアップロードが完了しました！"
