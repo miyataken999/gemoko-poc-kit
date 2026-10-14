@@ -1,0 +1,24 @@
+name: Simple GAS Triggered CI/CD
+
+on:
+  repository_dispatch:
+    types: [gas_event]
+  push:
+    branches: [ main, master ]
+
+jobs:
+  run-agent:
+    runs-on: ubuntu-latest
+    steps:
+      - name: リポジトリのチェックアウト
+        uses: actions/checkout@v4
+
+      - name: Python環境セットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: アクションの自動実行
+        run: |
+          echo "🚀 GAS / n8n からのトリガーで GitHub Actions が起動しました！"
+          echo "イベントメッセージ: ${{ github.event.client_payload.message }}"
